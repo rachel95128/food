@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 營養分析助手</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f8f9fa; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { color: #333; text-align: center; }
+        input[type="text"], button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { background-color: #4285f4; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:disabled { background-color: #ccc; }
+        #preview { width: 100%; border-radius: 10px; margin-top: 10px; display: none; }
+        #result { margin-top: 20px; line-height: 1.6; color: #444; background: #f0f4ff; padding: 15px; border-radius: 10px; display: none; width: 100%; }
+        .loading { display: none; color: #666; font-size: 14px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🍎 營養分析儀</h2>
+    
+    <input type="text" id="apiKeyInput" placeholder="請貼上您的 API Key">
+    
+    <button onclick="document.getElementById('fileInput').click()">📷 拍照或選取圖片</button>
+    <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+    
+    <img id="preview" alt="預覽圖片">
+    
+    <button id="runBtn" style="display:none" onclick="analyzeImage()">開始辨識食物</button>
+    
+    <div id="loading" class="loading">⏳ AI 正在思考中...</div>
+</div>
+
+<div id="result"></div>
+
+<script type="importmap">
+  {
+    "imports": {
+      "@google/generative-ai": "https://esm.run/@google/generative-ai"
+    }
+  }
+</script>
+
+<script type="module">
+    import { GoogleGenerativeAI } from "@google/generative-ai";
+
+    let selectedBase64 = "";
+
+    // 處理圖片選取與預覽
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = document.getElementById('preview');
+            img.src = event.target.result;
+            img.style.display = "block";
+            document.getElementById('runBtn').style.display = "block";
+            // 轉存為 Base64
+            selectedBase64 = event.target.result.split(',')[1];
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // 呼叫 API 進行辨識
+    window.analyzeImage = async function() {
+        const key = document.getElementById('apiKeyInput').value.trim();
+        const resultDiv = document.getElementById('result');
+        const runBtn = document.getElementById('runBtn');
+        const loading = document.getElementById('loading');
+
+        if (!key) {
+            alert("請先輸入您的 API Key！");
+            return;
+        }
+
+        runBtn.disabled = true;
+        loading.style.display = "block";
+        resultDiv.style.display = "none";
+
+        try {
+            const genAI = new GoogleGenerativeAI(key);
+            // 使用 1.5 Flash 模型，這也是您之前想測試的型號
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+
+
+
+            const prompt = "你是一位專業營養師，請分析這張圖中的食物，估算熱量並提供營養建議。請用繁體中文回答。";
+            const imagePart = {
+                inlineData: { data: selectedBase64, mimeType: "image/jpeg" }
+            };
+
+            const result = await model.generateContent([prompt, imagePart]);
+            const response = await result.response;
+            
+            resultDiv.innerHTML = "<strong>分析結果：</strong><br>" + response.text().replace(/\n/g, "<br>");
+            resultDiv.style.display = "block";
+        } catch (error) {
+            resultDiv.innerHTML = "<span style='color:red'>發生錯誤：</span><br>" + error.message;
+            resultDiv.style.display = "block";
+        } finally {
+            runBtn.disabled = false;
+            loading.style.display = "none";
+        }
+    };
+</script>
+
+</body>
+</html>
