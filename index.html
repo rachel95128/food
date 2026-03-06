@@ -84,7 +84,8 @@
         try {
             const genAI = new GoogleGenerativeAI(key);
             // 使用 1.5 Flash 模型，這也是您之前想測試的型號
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1beta' });
+            const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+
 
 
 
